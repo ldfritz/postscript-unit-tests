@@ -1,49 +1,118 @@
 %!
-/movedown {currentpoint 3 2 roll sub moveto} def
-/movexto {currentpoint 3 2 roll exch moveto pop} def
+/x         {currentpoint      pop} def
+/y         {currentpoint exch pop} def
+/moveup    {0 exch       rmoveto}  def
+/movedown  {0 exch   neg rmoveto}  def
+/moveleft  {  neg  0     rmoveto}  def
+/moveright {       0     rmoveto}  def
+/movexto   {       y     moveto}   def
+/moveyto   {x exch       moveto}   def
 
-/ensure_assertions {
-  /assertions where {
-    pop %discard the location
+/append_str {
+  /str_2 exch def
+  /str_1 exch def
+  /str_3 str_1 length str_2 length add string def
+  str_1 str_3 copy pop
+  str_3 str_1 length str_2 putinterval
+  str_3
+} def
+
+/to_str {
+  100 string cvs
+} def
+
+% Create the assertions array unless it exists.
+%
+% - -- -
+%
+% Side Effects:
+%   Creates an assertion array.
+%   Creates an assertion counter.
+%   Creates a failure counter.
+/setup_tests {
+  /assertions_arr where {
+    pop % The array exists. Discard the unused location.
   } {
-    /assertions 100 array def %create a decent sized array
-    assertions 0 0 put %store the current index in the first field
-    /failures 0 def %create a failure counter
+    /assertions_arr 100 array def % Create an array.
+    /assertions 0 def % Create an assertions counter.
+    /failures 0 def % Create a failure counter.
   } ifelse
 } def
 
+% Assert that the given procedure is true.
+%
+% proc str -- -
 /assert {
-  ensure_assertions
-  assertions 0 assertions 0 get 1 add put
-  2 array astore
-  assertions exch
-  assertions 0 get exch
+  setup_tests
+  exch                % -- str proc
+  2 array astore      % -- [str proc]
+  assertions_arr exch % -- array [str proc]
+  assertions exch     % -- array index [str proc]
   put
+  /assertions assertions 1 add def % assertions++
 } def
 
-/tests_pass? {
-  ensure_assertions
-  /Courier findfont 12 scalefont setfont
+% Assert the procedure and following element to be true.
+%
+/assert_equal {
+  setup_tests
+  /expected exch def
+  /actual   exch def
+
+  /test_case {actual expected eq} def
+  test_case
+
+  (expected: )
+  expected to_str append_str
+  ( actual: )     append_str
+  actual to_str   append_str
+  assert
+} def
+
+% Runs all the tests.
+%
+% - -- bool
+%
+% Side Effects:
+%   Sets font.
+%   Changes cursor position.
+%   Increments failures if necessary.
+%   And prints on the page if there is a failure.
+%
+% Returns a boolean of whether all the tests passed.
+/all_tests_passed? {
+  setup_tests
+
+  /test_fontsize 20 def
+  /Courier findfont test_fontsize scalefont setfont
   0 11 72 mul 32 sub moveto
-  1 1 assertions 0 get {
-    assertions exch get
-    aload pop
-    exec not {
+
+  0 1 assertions 1 sub {
+    assertions_arr exch get
+    aload pop  % Push test array elements back onto stack.
+    exec not { % Do, if the test is not true.
       /failures failures 1 add def
-      12 movedown
+      test_fontsize movedown
       32 movexto
-      show
-    } if
+      dup length 0 eq {
+        pop
+        (No message given.)
+      } if
+      show % Display the message.
+    } {
+      pop % Discard the unused message.
+    } ifelse
   } for
-  failures 0 eq
+  failures 0 eq % See if the failures were every incremented
 } def
 
-(1+1=2) {1 1 add 2 eq} assert
-(1+1=3) {1 1 add 3 eq} assert
-(2+2=4) {2 2 add 4 eq} assert
-(2+2=5) {2 2 add 5 eq} assert
+{(Luke) ( ) append_str (Fritz) append_str} (Luke Fritz) assert_equal
+{1 1 add} 2 assert_equal
+{2 2 add 4 eq} (2+2=4) assert
+{10 to_str} (10) assert_equal
+{/test_name to_str} (test_name) assert_equal
 
-tests_pass? {
+all_tests_passed? { % Do, if all the tests passed.
   /Courier findfont 12 scalefont setfont
   32 11 72 mul 32 sub 12 sub moveto
   (All tests passed.) show
