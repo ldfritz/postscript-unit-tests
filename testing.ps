@@ -1,0 +1,52 @@
+%!
+/movedown {currentpoint 3 2 roll sub moveto} def
+/movexto {currentpoint 3 2 roll exch moveto pop} def
+
+/ensure_assertions {
+  /assertions where {
+    pop %discard the location
+  } {
+    /assertions 100 array def %create a decent sized array
+    assertions 0 0 put %store the current index in the first field
+    /failures 0 def %create a failure counter
+  } ifelse
+} def
+
+/assert {
+  ensure_assertions
+  assertions 0 assertions 0 get 1 add put
+  2 array astore
+  assertions exch
+  assertions 0 get exch
+  put
+} def
+
+/tests_pass? {
+  ensure_assertions
+  /Courier findfont 12 scalefont setfont
+  0 11 72 mul 32 sub moveto
+  1 1 assertions 0 get {
+    assertions exch get
+    aload pop
+    exec not {
+      /failures failures 1 add def
+      12 movedown
+      32 movexto
+      show
+    } if
+  } for
+  failures 0 eq
+} def
+
+(1+1=2) {1 1 add 2 eq} assert
+(1+1=3) {1 1 add 3 eq} assert
+(2+2=4) {2 2 add 4 eq} assert
+(2+2=5) {2 2 add 5 eq} assert
+
+tests_pass? {
+  /Courier findfont 12 scalefont setfont
+  32 11 72 mul 32 sub 12 sub moveto
+  (All tests passed.) show
+} if
+
+showpage
