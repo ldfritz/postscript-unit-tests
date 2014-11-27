@@ -1,4 +1,7 @@
 %!
+/want_failure? true def
+/want_failure? false def
+
 /x         {currentpoint      pop} def
 /y         {currentpoint exch pop} def
 /moveup    {0 exch       rmoveto}  def
@@ -36,6 +39,7 @@
     /assertions_arr 100 array def % Create an array.
     /assertions 0 def % Create an assertions counter.
     /failures 0 def % Create a failure counter.
+    /failure_messages 100 array def % Create a failure counter.
   } ifelse
 } def
 
@@ -83,22 +87,17 @@
 /all_tests_passed? {
   setup_tests
 
-  /test_fontsize 20 def
-  /Courier findfont test_fontsize scalefont setfont
-  0 11 72 mul 32 sub moveto
-
   0 1 assertions 1 sub {
     assertions_arr exch get
     aload pop  % Push test array elements back onto stack.
     exec not { % Do, if the test is not true.
-      /failures failures 1 add def
-      test_fontsize movedown
-      32 movexto
       dup length 0 eq {
         pop
         (No message given.)
       } if
-      show % Display the message.
+      failure_messages exch failures exch
+      put
+      /failures failures 1 add def
     } {
       pop % Discard the unused message.
     } ifelse
@@ -106,16 +105,36 @@
   failures 0 eq % See if the failures were every incremented
 } def
 
+/display_errors {
+  /test_fontsize 20 def
+  /Courier findfont test_fontsize scalefont setfont
+  0 11 72 mul 32 sub moveto
+
+  0 1 failures 1 sub {
+    test_fontsize movedown
+    32 movexto
+    failure_messages exch get show
+  } for
+  showpage
+} def
+
 {(Luke) ( ) append_str (Fritz) append_str} (Luke Fritz) assert_equal
 {1 1 add} 2 assert_equal
 {2 2 add 4 eq} (2+2=4) assert
 {10 to_str} (10) assert_equal
 {/test_name to_str} (test_name) assert_equal
+want_failure? { {false} () assert } if
 
 all_tests_passed? { % Do, if all the tests passed.
   /Courier findfont 12 scalefont setfont
   32 11 72 mul 32 sub 12 sub moveto
   (All tests passed.) show
-} if
+  showpage
+} {
+  /Courier findfont 12 scalefont setfont
+  32 11 72 mul 32 sub 12 sub moveto
+  (Some tests failed.) show
+  showpage
+  display_errors
+} ifelse
 
-showpage
